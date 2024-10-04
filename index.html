@@ -3,41 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="styles.css">
     <title>Inscription et Connexion</title>
+    <link rel="stylesheet" href="styles.css"> <!-- Lien vers le fichier CSS -->
 </head>
 <body>
-    <div class="container">
-        <h1>Inscription</h1>
-        <form id="registrationForm">
-            <label for="username">Nom d'utilisateur</label>
-            <input type="text" id="username" placeholder="Entrez votre nom d'utilisateur" required>
+    <h1>Inscription</h1>
+    <input type="text" id="username" placeholder="Nom d'utilisateur" required>
+    <input type="email" id="email" placeholder="Email" required>
+    <input type="password" id="password" placeholder="Mot de passe" required>
+    <button id="registerBtn">S'inscrire</button>
+    <button id="loginBtn">Se connecter</button>
 
-            <label for="email">Email</label>
-            <input type="email" id="email" placeholder="Entrez votre email" required>
+    <script>
+        // Ouvrir une base de données IndexedDB
+        const request = indexedDB.open("UserDatabase", 1);
+        let db;
 
-            <label for="password">Mot de passe</label>
-            <input type="password" id="password" placeholder="Entrez votre mot de passe" required>
+        // Événement appelé lors de la création ou mise à jour de la base de données
+        request.onupgradeneeded = (event) => {
+            db = event.target.result;
+            const userStore = db.createObjectStore("users", { keyPath: "id", autoIncrement: true });
+            userStore.createIndex("email", "email", { unique: true });
+        };
 
-            <button type="submit">S'inscrire</button>
-        </form>
+        // Événement appelé lors de l'ouverture réussie de la base de données
+        request.onsuccess = (event) => {
+            db = event.target.result;
+            console.log("Base de données ouverte avec succès!");
+        };
 
-        <div id="message"></div>
+        // Fonction pour ajouter un utilisateur à la base de données
+        const addUser = (user) => {
+            const transaction = db.transaction("users", "readwrite");
+            const userStore = transaction.objectStore("users");
+            userStore.add(user);
+            transaction.oncomplete = () => {
+                console.log("Utilisateur ajouté avec succès!");
+            };
+            transaction.onerror = () => {
+                console.error("Erreur lors de l'ajout de l'utilisateur");
+            };
+        };
 
-        <h1>Connexion</h1>
-        <form id="loginForm">
-            <label for="loginEmail">Email</label>
-            <input type="email" id="loginEmail" placeholder="Entrez votre email" required>
+        // Fonction pour vérifier les identifiants d'un utilisateur
+        const loginUser = (email, password) => {
+            const transaction = db.transaction("users", "readonly");
+            const userStore = transaction.objectStore("users");
+            const index = userStore.index("email");
 
-            <label for="loginPassword">Mot de passe</label>
-            <input type="password" id="loginPassword" placeholder="Entrez votre mot de passe" required>
+            const request = index.get(email);
+            request.onsuccess = (event) => {
+                const user = event.target.result;
+                if (user && user.password === password) {
+                    alert("Connexion réussie!");
+                } else {
+                    alert("Identifiants invalides");
+                }
+            };
 
-            <button type="submit">Se connecter</button>
-        </form>
+            request.onerror = () => {
+                console.error("Erreur lors de la recherche de l'utilisateur");
+            };
+        };
 
-        <div id="loginMessage"></div>
-    </div>
+        // Gestion des événements pour le bouton d'inscription
+        document.getElementById("registerBtn").onclick = () => {
+            const username = document.getElementById("username").value;
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
 
-    <script src="script.js"></script>
+            if (!username || !email || !password) {
+                alert("Veuillez remplir tous les champs");
+                return;
+            }
+
+            addUser({ username, email, password });
+            alert("Utilisateur inscrit avec succès!");
+            document.getElementById("username").value = "";
+            document.getElementById("email").value = "";
+            document.getElementById("password").value = "";
+        };
+
+        // Gestion des événements pour le bouton de connexion
+        document.getElementById("loginBtn").onclick = () => {
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+
+            if (!email || !password) {
+                alert("Veuillez remplir tous les champs");
+                return;
+            }
+
+            loginUser(email, password);
+        };
+    </script>
 </body>
 </html>
