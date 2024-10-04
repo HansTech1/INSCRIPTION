@@ -3,29 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
-    <title>Formulaire d'inscription</title>
+    <title>Inscription et Connexion</title>
 </head>
 <body>
     <div class="container">
         <h1>Inscription</h1>
         <form id="registrationForm">
-            <label for="username">Nom d'utilisateur:</label>
-            <input type="text" id="username" required>
+            <label for="username">Nom d'utilisateur</label>
+            <input type="text" id="username" placeholder="Entrez votre nom d'utilisateur" required>
 
-            <label for="email">Email:</label>
-            <input type="email" id="email" required>
+            <label for="email">Email</label>
+            <input type="email" id="email" placeholder="Entrez votre email" required>
 
-            <label for="password">Mot de passe:</label>
-            <input type="password" id="password" required>
+            <label for="password">Mot de passe</label>
+            <input type="password" id="password" placeholder="Entrez votre mot de passe" required>
 
             <button type="submit">S'inscrire</button>
         </form>
+
         <div id="message"></div>
+
+        <h1>Connexion</h1>
+        <form id="loginForm">
+            <label for="loginEmail">Email</label>
+            <input type="email" id="loginEmail" placeholder="Entrez votre email" required>
+
+            <label for="loginPassword">Mot de passe</label>
+            <input type="password" id="loginPassword" placeholder="Entrez votre mot de passe" required>
+
+            <button type="submit">Se connecter</button>
+        </form>
+
+        <div id="loginMessage"></div>
     </div>
+
     <script src="script.js"></script>
 </body>
 </html>
