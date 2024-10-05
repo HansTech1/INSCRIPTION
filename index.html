@@ -5,48 +5,145 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inscription et Connexion</title>
     <link rel="stylesheet" href="styles.css"> <!-- Lien vers le fichier CSS -->
+    <style>
+        .container {
+            background: rgba(20, 20, 20, 0.85); /* Ajustez l'opacité si nécessaire */
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.6);
+            width: 400px;
+            text-align: center;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 20px;
+            color: #00ffff;
+            text-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+        }
+
+        input {
+            width: calc(100% - 24px);
+            padding: 12px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            transition: all 0.3s ease-in-out;
+        }
+
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        input:focus {
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+            box-shadow: 0 0 10px #00ffff;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #00ffff;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease-in-out;
+        }
+
+        button:hover {
+            background-color: #00aaff;
+        }
+
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+
+        .success {
+            color: green;
+            margin-top: 10px;
+        }
+    </style>
 </head>
-<body>
-    <h1>Inscription</h1>
-    <input type="text" id="username" placeholder="Nom d'utilisateur" required>
-    <input type="email" id="email" placeholder="Email" required>
-    <input type="password" id="password" placeholder="Mot de passe" required>
-    <button id="registerBtn">S'inscrire</button>
-    <button id="loginBtn">Se connecter</button>
+<body style="background: url('thumb.jpg') no-repeat center center fixed; background-size: cover;">
+
+    <div class="container">
+        <h1 id="formTitle">Inscription</h1>
+        
+        <div id="registerForm" class="form-container">
+            <p>
+                <input type="text" id="username" placeholder="Nom d'utilisateur" required>
+            </p>
+            <p>
+                <input type="email" id="email" placeholder="Email" required>
+            </p>
+            <p>
+                <input type="password" id="password" placeholder="Mot de passe" required>
+            </p>
+            <p>
+                <button id="registerBtn">S'inscrire</button>
+            </p>
+            <div id="message" class="error"></div>
+            <p>
+                Vous avez déjà un compte ? <a href="#" id="showLogin">Connectez-vous ici</a>
+            </p>
+        </div>
+
+        <div id="loginForm" class="form-container" style="display: none;">
+            <p>
+                <input type="email" id="loginEmail" placeholder="Email" required>
+            </p>
+            <p>
+                <input type="password" id="loginPassword" placeholder="Mot de passe" required>
+            </p>
+            <p>
+                <button id="loginBtn">Se connecter</button>
+            </p>
+            <div id="loginMessage" class="error"></div>
+            <p>
+                Vous n'avez pas de compte ? <a href="#" id="showRegister">Créez-en un ici</a>
+            </p>
+        </div>
+    </div>
 
     <script>
-        // Ouvrir une base de données IndexedDB
         const request = indexedDB.open("UserDatabase", 1);
         let db;
 
-        // Événement appelé lors de la création ou mise à jour de la base de données
         request.onupgradeneeded = (event) => {
             db = event.target.result;
             const userStore = db.createObjectStore("users", { keyPath: "id", autoIncrement: true });
             userStore.createIndex("email", "email", { unique: true });
+            userStore.createIndex("username", "username", { unique: true });
         };
 
-        // Événement appelé lors de l'ouverture réussie de la base de données
         request.onsuccess = (event) => {
             db = event.target.result;
             console.log("Base de données ouverte avec succès!");
+            showRegisterForm(); // Affiche le formulaire d'inscription par défaut
         };
 
-        // Fonction pour ajouter un utilisateur à la base de données
         const addUser = (user) => {
             const transaction = db.transaction("users", "readwrite");
             const userStore = transaction.objectStore("users");
-            userStore.add(user);
-            transaction.oncomplete = () => {
-                console.log("Utilisateur ajouté avec succès!");
+            const request = userStore.add(user);
+
+            request.onsuccess = () => {
+                displayMessage("Utilisateur inscrit avec succès!", "success");
             };
-            transaction.onerror = () => {
-                console.error("Erreur lors de l'ajout de l'utilisateur");
+
+            request.onerror = () => {
+                displayMessage("L'email ou le nom d'utilisateur est déjà utilisé ou une erreur s'est produite.", "error");
             };
         };
 
-        // Fonction pour vérifier les identifiants d'un utilisateur
-        const loginUser = (email, password) => {
+        const checkEmailExists = (email, callback) => {
             const transaction = db.transaction("users", "readonly");
             const userStore = transaction.objectStore("users");
             const index = userStore.index("email");
@@ -54,47 +151,136 @@
             const request = index.get(email);
             request.onsuccess = (event) => {
                 const user = event.target.result;
-                if (user && user.password === password) {
-                    alert("Connexion réussie!");
-                } else {
-                    alert("Identifiants invalides");
-                }
+                callback(!!user);
             };
 
             request.onerror = () => {
                 console.error("Erreur lors de la recherche de l'utilisateur");
+                callback(false);
             };
         };
 
-        // Gestion des événements pour le bouton d'inscription
-        document.getElementById("registerBtn").onclick = () => {
-            const username = document.getElementById("username").value;
-            const email = document.getElementById("email").value;
-            const password = document.getElementById("password").value;
+        const checkUsernameExists = (username, callback) => {
+            const transaction = db.transaction("users", "readonly");
+            const userStore = transaction.objectStore("users");
+            const index = userStore.index("username");
 
-            if (!username || !email || !password) {
-                alert("Veuillez remplir tous les champs");
-                return;
-            }
+            const request = index.get(username);
+            request.onsuccess = (event) => {
+                const user = event.target.result;
+                callback(!!user);
+            };
 
-            addUser({ username, email, password });
-            alert("Utilisateur inscrit avec succès!");
-            document.getElementById("username").value = "";
-            document.getElementById("email").value = "";
-            document.getElementById("password").value = "";
+            request.onerror = () => {
+                console.error("Erreur lors de la recherche de l'utilisateur");
+                callback(false);
+            };
         };
 
-        // Gestion des événements pour le bouton de connexion
-        document.getElementById("loginBtn").onclick = () => {
-            const email = document.getElementById("email").value;
-            const password = document.getElementById("password").value;
+        const validatePassword = (password) => {
+            const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,18}$/;
+            return passwordRegex.test(password);
+        };
 
-            if (!email || !password) {
-                alert("Veuillez remplir tous les champs");
+        const displayMessage = (message, type) => {
+            const messageDiv = document.getElementById("message");
+            messageDiv.textContent = message;
+            messageDiv.className = type; // "error" ou "success"
+        };
+
+        const showRegisterForm = () => {
+            document.getElementById("formTitle").textContent = "Inscription";
+            document.getElementById("registerForm").style.display = "block";
+            document.getElementById("loginForm").style.display = "none";
+        };
+
+        const showLoginForm = () => {
+            document.getElementById("formTitle").textContent = "Connexion";
+            document.getElementById("loginForm").style.display = "block";
+            document.getElementById("registerForm").style.display = "none";
+        };
+
+        document.getElementById("registerBtn").onclick = () => {
+            const username = document.getElementById("username").value.trim();
+            const email = document.getElementById("email").value.trim();
+            const password = document.getElementById("password").value.trim();
+
+            displayMessage("", ""); // Reset message
+
+            if (!username || !email || !password) {
+                displayMessage("Veuillez remplir tous les champs", "error");
                 return;
             }
 
-            loginUser(email, password);
+            if (!validatePassword(password)) {
+                displayMessage("Le mot de passe doit contenir entre 8 et 18 caractères, avec des lettres, des chiffres et des caractères spéciaux.", "error");
+                return;
+            }
+
+            checkEmailExists(email, (emailExists) => {
+                if (emailExists) {
+                    displayMessage("Cet email est déjà utilisé. Veuillez en choisir un autre.", "error");
+                } else {
+                    checkUsernameExists(username, (usernameExists) => {
+                        if (usernameExists) {
+                            displayMessage("Ce nom d'utilisateur est déjà utilisé. Veuillez en choisir un autre.", "error");
+                        } else {
+                            addUser({ username, email, password });
+                            document.getElementById("username").value = "";
+                            document.getElementById("email").value = "";
+                            document.getElementById("password").value = "";
+                        }
+                    });
+                }
+            });
+        };
+
+        document.getElementById("loginBtn").onclick = () => {
+            const email = document.getElementById("loginEmail").value.trim();
+            const password = document.getElementById("loginPassword").value.trim();
+            const loginMessage = document.getElementById("loginMessage");
+
+            loginMessage.textContent = ""; // Reset message
+
+            if (!email || !password) {
+                loginMessage.textContent = "Veuillez remplir tous les champs.";
+                loginMessage.className = "error";
+                return;
+            }
+
+            checkEmailExists(email, (emailExists) => {
+                if (!emailExists) {
+                    loginMessage.textContent = "Cet email n'existe pas. Veuillez vérifier.";
+                    loginMessage.className = "error";
+                    return;
+                }
+
+                const transaction = db.transaction("users", "readonly");
+                const userStore = transaction.objectStore("users");
+                const index = userStore.index("email");
+
+                const request = index.get(email);
+                request.onsuccess = (event) => {
+                    const user = event.target.result;
+                    if (user && user.password === password) {
+                        loginMessage.textContent = "Connexion réussie!";
+                        loginMessage.className = "success";
+                    } else {
+                        loginMessage.textContent = "Identifiants invalides.";
+                        loginMessage.className = "error";
+                    }
+                };
+            });
+        };
+
+        document.getElementById("showLogin").onclick = (event) => {
+            event.preventDefault();
+            showLoginForm();
+        };
+
+        document.getElementById("showRegister").onclick = (event) => {
+            event.preventDefault();
+            showRegisterForm();
         };
     </script>
 </body>
