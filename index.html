@@ -4,14 +4,61 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inscription et Connexion</title>
-    <link rel="stylesheet" href="styles.css"> <!-- Link to your CSS file -->
+    
+    <!-- Liens pour les polices Google -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Advent+Pro:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            background-image: url('thumb.jpg');
+            background-size: cover;
+            background-position: center;
+            font-family: 'Advent Pro', sans-serif;
+            color: white;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 40px;
+            border-radius: 10px;
+            max-width: 400px;
+            margin: auto;
+            text-align: center;
+        }
+        h1 {
+            margin-bottom: 20px;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 5px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        p {
+            margin: 10px 0;
+        }
+    </style>
     <script type="module">
-        // Import Firebase functions
         import { initializeApp } from "firebase/app";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
-        import { getFirestore, collection, addDoc, getDocs, query, where } from "firebase/firestore";
+        import { getFirestore, collection, addDoc } from "firebase/firestore";
 
-        // Your web app's Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyDC7a1EgO3tRWsb4_ywFnzcsjJ_7S7UtaU",
             authDomain: "gestionutilisateur-3f8e6.firebaseapp.com",
@@ -22,27 +69,15 @@
             measurementId: "G-HM68M5YWEY"
         };
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Function to check if email exists
-        const checkEmailExists = async (email) => {
-            const usersRef = collection(db, "users");
-            const q = query(usersRef, where("email", "==", email));
-            const querySnapshot = await getDocs(q);
-            return !querySnapshot.empty; // Returns true if the email exists
-        };
-
-        // Function to add user
         const addUser = async (username, email, password) => {
             try {
-                // Create a new user
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
 
-                // Add user to Firestore
                 await addDoc(collection(db, 'users'), {
                     username: username,
                     email: email,
@@ -55,91 +90,74 @@
             }
         };
 
-        // Show the registration form
-        const showRegisterForm = () => {
-            document.getElementById("registerForm").style.display = "block";
-            document.getElementById("loginForm").style.display = "none";
+        const loginUser = async (email, password) => {
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                document.getElementById("loginMessage").textContent = "Connexion réussie!";
+            } catch (error) {
+                document.getElementById("loginMessage").textContent = "Identifiants invalides.";
+            }
         };
 
-        // Show the login form
-        const showLoginForm = () => {
-            document.getElementById("registerForm").style.display = "none";
-            document.getElementById("loginForm").style.display = "block";
-        };
-
-        // Registration form handling
         document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("registerForm").addEventListener("submit", async (event) => {
-                event.preventDefault(); // Prevent page reload
-
+                event.preventDefault();
                 const username = document.getElementById("username").value;
                 const email = document.getElementById("email").value;
                 const password = document.getElementById("password").value;
-
-                const emailExists = await checkEmailExists(email);
-                if (emailExists) {
-                    document.getElementById("message").textContent = "Cet email est déjà utilisé.";
-                    return;
-                }
-
                 await addUser(username, email, password);
             });
 
-            // Login form handling
             document.getElementById("loginForm").addEventListener("submit", async (event) => {
-                event.preventDefault(); // Prevent page reload
-
+                event.preventDefault();
                 const email = document.getElementById("loginEmail").value;
                 const password = document.getElementById("loginPassword").value;
-
-                try {
-                    await signInWithEmailAndPassword(auth, email, password);
-                    document.getElementById("loginMessage").textContent = "Connexion réussie!";
-                } catch (error) {
-                    document.getElementById("loginMessage").textContent = "Identifiants invalides.";
-                }
+                await loginUser(email, password);
             });
 
-            // Toggle between login and registration forms
-            document.getElementById("showLogin").addEventListener("click", function(event) {
-                event.preventDefault();
-                showLoginForm();
-            });
+            document.getElementById("showRegister").onclick = () => {
+                document.getElementById("loginSection").style.display = "none";
+                document.getElementById("registerSection").style.display = "block";
+            };
 
-            document.getElementById("showRegister").addEventListener("click", function(event) {
-                event.preventDefault();
-                showRegisterForm();
-            });
+            document.getElementById("showLogin").onclick = () => {
+                document.getElementById("registerSection").style.display = "none";
+                document.getElementById("loginSection").style.display = "block";
+            };
         });
     </script>
 </head>
 <body>
     <div class="container">
-        <h1>Inscription</h1>
-        <form id="registerForm">
-            <label for="username">Nom d'utilisateur</label>
-            <input type="text" id="username" placeholder="Nom d'utilisateur" required>
-            <label for="email">Email</label>
-            <input type="email" id="email" placeholder="Email" required>
-            <label for="password">Mot de passe</label>
-            <input type="password" id="password" placeholder="Mot de passe" required>
-            <button type="submit">S'inscrire</button>
-            <p id="message"></p>
-        </form>
+        <h1>Inscription et Connexion</h1>
 
-        <p>Vous avez déjà un compte? <a href="#" id="showLogin">Connectez-vous ici</a></p>
+        <div id="loginSection">
+            <h2>Connexion</h2>
+            <form id="loginForm">
+                <label for="loginEmail">Email</label>
+                <input type="email" id="loginEmail" placeholder="Email" required>
+                <label for="loginPassword">Mot de passe</label>
+                <input type="password" id="loginPassword" placeholder="Mot de passe" required>
+                <button type="submit">Se connecter</button>
+                <p id="loginMessage"></p>
+            </form>
+            <p>Vous n'avez pas de compte? <a href="#" id="showRegister">Créez-en un</a></p>
+        </div>
 
-        <h1>Connexion</h1>
-        <form id="loginForm" style="display: none;">
-            <label for="loginEmail">Email</label>
-            <input type="email" id="loginEmail" placeholder="Email" required>
-            <label for="loginPassword">Mot de passe</label>
-            <input type="password" id="loginPassword" placeholder="Mot de passe" required>
-            <button type="submit">Se connecter</button>
-            <p id="loginMessage"></p>
-        </form>
-
-        <p>Vous n'avez pas de compte? <a href="#" id="showRegister">Créez-en un</a></p>
+        <div id="registerSection" style="display: none;">
+            <h2>Inscription</h2>
+            <form id="registerForm">
+                <label for="username">Nom d'utilisateur</label>
+                <input type="text" id="username" placeholder="Nom d'utilisateur" required>
+                <label for="email">Email</label>
+                <input type="email" id="email" placeholder="Email" required>
+                <label for="password">Mot de passe</label>
+                <input type="password" id="password" placeholder="Mot de passe" required>
+                <button type="submit">S'inscrire</button>
+                <p id="message"></p>
+            </form>
+            <p>Vous avez déjà un compte? <a href="#" id="showLogin">Connectez-vous ici</a></p>
+        </div>
     </div>
 </body>
 </html>
