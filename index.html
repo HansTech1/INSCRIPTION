@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inscription et Connexion</title>
-    <link rel="stylesheet" href="styles.css"> <!-- Lien vers le fichier CSS -->
+    <link rel="stylesheet" href="styles.css">
     <style>
         .container {
-            background: rgba(20, 20, 20, 0.85); /* Ajustez l'opacité si nécessaire */
+            background: rgba(20, 20, 20, 0.85);
             padding: 40px;
             border-radius: 15px;
             box-shadow: 0 0 30px rgba(0, 255, 255, 0.6);
@@ -69,7 +69,19 @@
             color: green;
             margin-top: 10px;
         }
+
+        .login-with-google-btn {
+            background-color: #db4437;
+            color: white;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+
     </style>
+    <!-- Inclure les bibliothèques Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js"></script>
 </head>
 <body style="background: url('thumb.jpg') no-repeat center center fixed; background-size: cover;">
 
@@ -89,6 +101,11 @@
             <p>
                 <button id="registerBtn">S'inscrire</button>
             </p>
+            <p>
+                <button type="button" id="googleSignUpBtn" class="login-with-google-btn">
+                    S'inscrire avec Google
+                </button>
+            </p>
             <div id="message" class="error"></div>
             <p>
                 Vous avez déjà un compte ? <a href="#" id="showLogin">Connectez-vous ici</a>
@@ -105,6 +122,11 @@
             <p>
                 <button id="loginBtn">Se connecter</button>
             </p>
+            <p>
+                <button type="button" id="googleLoginBtn" class="login-with-google-btn">
+                    Se connecter avec Google
+                </button>
+            </p>
             <div id="loginMessage" class="error"></div>
             <p>
                 Vous n'avez pas de compte ? <a href="#" id="showRegister">Créez-en un ici</a>
@@ -113,6 +135,45 @@
     </div>
 
     <script>
+        // Configuration Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyDC7a1EgO3tRWsb4_ywFnzcsjJ_7S7UtaU",
+            authDomain: "gestionutilisateur-3f8e6.firebaseapp.com",
+            projectId: "gestionutilisateur-3f8e6",
+            storageBucket: "gestionutilisateur-3f8e6.appspot.com",
+            messagingSenderId: "872127075871",
+            appId: "1:872127075871:web:1b44316d800ddf2cf8e72a",
+            measurementId: "G-HM68M5YWE"
+        };
+
+        // Initialiser Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+
+        // Logique d'inscription avec Google
+        document.getElementById("googleSignUpBtn").onclick = () => {
+            const provider = new firebase.auth.GoogleAuthProvider(); // Crée un fournisseur Google
+            auth.signInWithPopup(provider) // Ouvre une fenêtre pour se connecter avec Google
+                .then((result) => {
+                    const user = result.user; // Récupère les informations de l'utilisateur
+                    console.log("Utilisateur inscrit avec Google: ", user); // Affiche les infos de l'utilisateur
+
+                    // Enregistre l'utilisateur dans votre base de données
+                    const userData = {
+                        username: user.displayName || "Nom d'utilisateur par défaut", // Utilise le nom de l'utilisateur Google ou un nom par défaut
+                        email: user.email, // Récupère l'email de l'utilisateur
+                        password: "N/A" // Pas de mot de passe nécessaire ici
+                    };
+                    addUser(userData); // Fonction pour ajouter l'utilisateur à votre base de données
+                    displayMessage("Inscription réussie avec Google!", "success"); // Affiche un message de succès
+                })
+                .catch((error) => {
+                    console.error("Erreur lors de l'inscription avec Google: ", error); // Affiche une erreur si quelque chose ne va pas
+                    displayMessage("Erreur lors de l'inscription avec Google.", "error"); // Affiche un message d'erreur
+                });
+        };
+
+        // Logique d'inscription normale
         const request = indexedDB.open("UserDatabase", 1);
         let db;
 
@@ -147,16 +208,11 @@
             const transaction = db.transaction("users", "readonly");
             const userStore = transaction.objectStore("users");
             const index = userStore.index("email");
-
             const request = index.get(email);
+
             request.onsuccess = (event) => {
                 const user = event.target.result;
-                callback(!!user);
-            };
-
-            request.onerror = () => {
-                console.error("Erreur lors de la recherche de l'utilisateur");
-                callback(false);
+                callback(!!user); // Renvoie vrai si l'utilisateur existe, sinon faux
             };
         };
 
@@ -164,123 +220,91 @@
             const transaction = db.transaction("users", "readonly");
             const userStore = transaction.objectStore("users");
             const index = userStore.index("username");
-
             const request = index.get(username);
+
             request.onsuccess = (event) => {
                 const user = event.target.result;
-                callback(!!user);
-            };
-
-            request.onerror = () => {
-                console.error("Erreur lors de la recherche de l'utilisateur");
-                callback(false);
+                callback(!!user); // Renvoie vrai si l'utilisateur existe, sinon faux
             };
         };
 
         const validatePassword = (password) => {
-            const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,18}$/;
-            return passwordRegex.test(password);
-        };
-
-        const displayMessage = (message, type) => {
-            const messageDiv = document.getElementById("message");
-            messageDiv.textContent = message;
-            messageDiv.className = type; // "error" ou "success"
-        };
-
-        const showRegisterForm = () => {
-            document.getElementById("formTitle").textContent = "Inscription";
-            document.getElementById("registerForm").style.display = "block";
-            document.getElementById("loginForm").style.display = "none";
-        };
-
-        const showLoginForm = () => {
-            document.getElementById("formTitle").textContent = "Connexion";
-            document.getElementById("loginForm").style.display = "block";
-            document.getElementById("registerForm").style.display = "none";
+            return password.length >= 6; // Exige un mot de passe d'au moins 6 caractères
         };
 
         document.getElementById("registerBtn").onclick = () => {
-            const username = document.getElementById("username").value.trim();
-            const email = document.getElementById("email").value.trim();
-            const password = document.getElementById("password").value.trim();
-
-            displayMessage("", ""); // Reset message
-
-            if (!username || !email || !password) {
-                displayMessage("Veuillez remplir tous les champs", "error");
-                return;
-            }
+            const username = document.getElementById("username").value;
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
 
             if (!validatePassword(password)) {
-                displayMessage("Le mot de passe doit contenir entre 8 et 18 caractères, avec des lettres, des chiffres et des caractères spéciaux.", "error");
+                displayMessage("Le mot de passe doit contenir au moins 6 caractères.", "error");
                 return;
             }
 
             checkEmailExists(email, (emailExists) => {
                 if (emailExists) {
-                    displayMessage("Cet email est déjà utilisé. Veuillez en choisir un autre.", "error");
-                } else {
-                    checkUsernameExists(username, (usernameExists) => {
-                        if (usernameExists) {
-                            displayMessage("Ce nom d'utilisateur est déjà utilisé. Veuillez en choisir un autre.", "error");
-                        } else {
-                            addUser({ username, email, password });
-                            document.getElementById("username").value = "";
-                            document.getElementById("email").value = "";
-                            document.getElementById("password").value = "";
-                        }
-                    });
-                }
-            });
-        };
-
-        document.getElementById("loginBtn").onclick = () => {
-            const email = document.getElementById("loginEmail").value.trim();
-            const password = document.getElementById("loginPassword").value.trim();
-            const loginMessage = document.getElementById("loginMessage");
-
-            loginMessage.textContent = ""; // Reset message
-
-            if (!email || !password) {
-                loginMessage.textContent = "Veuillez remplir tous les champs.";
-                loginMessage.className = "error";
-                return;
-            }
-
-            checkEmailExists(email, (emailExists) => {
-                if (!emailExists) {
-                    loginMessage.textContent = "Cet email n'existe pas. Veuillez vérifier.";
-                    loginMessage.className = "error";
+                    displayMessage("L'email est déjà utilisé.", "error");
                     return;
                 }
 
-                const transaction = db.transaction("users", "readonly");
-                const userStore = transaction.objectStore("users");
-                const index = userStore.index("email");
-
-                const request = index.get(email);
-                request.onsuccess = (event) => {
-                    const user = event.target.result;
-                    if (user && user.password === password) {
-                        loginMessage.textContent = "Connexion réussie!";
-                        loginMessage.className = "success";
-                    } else {
-                        loginMessage.textContent = "Identifiants invalides.";
-                        loginMessage.className = "error";
+                checkUsernameExists(username, (usernameExists) => {
+                    if (usernameExists) {
+                        displayMessage("Le nom d'utilisateur est déjà utilisé.", "error");
+                        return;
                     }
-                };
+
+                    const userData = { username, email, password };
+                    addUser(userData); // Ajoute l'utilisateur à la base de données
+                });
             });
         };
 
-        document.getElementById("showLogin").onclick = (event) => {
-            event.preventDefault();
-            showLoginForm();
+        const displayMessage = (message, type) => {
+            const messageElement = document.getElementById("message");
+            messageElement.innerText = message;
+            messageElement.className = type;
         };
 
-        document.getElementById("showRegister").onclick = (event) => {
-            event.preventDefault();
-            showRegisterForm();
+        const showLoginForm = () => {
+            document.getElementById("loginForm").style.display = "block"; // Affiche le formulaire de connexion
+            document.getElementById("registerForm").style.display = "none"; // Cache le formulaire d'inscription
+            document.getElementById("formTitle").innerText = "Connexion"; // Change le titre
+        };
+
+        const showRegisterForm = () => {
+            document.getElementById("loginForm").style.display = "none"; // Cache le formulaire de connexion
+            document.getElementById("registerForm").style.display = "block"; // Affiche le formulaire d'inscription
+            document.getElementById("formTitle").innerText = "Inscription"; // Change le titre
+        };
+
+        // Logique de connexion avec Google
+        document.getElementById("googleLoginBtn").onclick = () => {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider)
+                .then((result) => {
+                    const user = result.user;
+                    console.log("Utilisateur connecté avec Google: ", user);
+                    displayMessage("Connexion réussie avec Google!", "success");
+                })
+                .catch((error) => {
+                    console.error("Erreur lors de la connexion avec Google: ", error);
+                    displayMessage("Erreur lors de la connexion avec Google.", "error");
+                });
+        };
+
+        document.getElementById("loginBtn").onclick = () => {
+            const email = document.getElementById("loginEmail").value;
+            const password = document.getElementById("loginPassword").value;
+
+            auth.signInWithEmailAndPassword(email, password)
+                .then(() => {
+                    displayMessage("Connexion réussie!", "success");
+                })
+                .catch((error) => {
+                    console.error("Erreur lors de la connexion: ", error);
+                    displayMessage("Erreur lors de la connexion. Vérifiez votre email et mot de passe.", "error");
+                });
         };
     </script>
 </body>
