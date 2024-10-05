@@ -2,190 +2,286 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, content-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inscription et Connexion</title>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Advent+Pro:wght@400&display=swap" rel="stylesheet">
-    
+    <link rel="stylesheet" href="styles.css"> <!-- Lien vers le fichier CSS -->
     <style>
-        body {
-            background-image: url('thumb.jpg');
-            background-size: cover;
-            background-position: center;
-            font-family: 'Advent Pro', sans-serif;
-            color: white;
-            margin: 0;
-            padding: 0;
-        }
         .container {
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(20, 20, 20, 0.85); /* Ajustez l'opacité si nécessaire */
             padding: 40px;
-            border-radius: 10px;
-            max-width: 400px;
-            margin: auto;
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.6);
+            width: 400px;
             text-align: center;
+            position: relative;
         }
+
         h1 {
+            font-size: 28px;
             margin-bottom: 20px;
+            color: #00ffff;
+            text-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
         }
+
         input {
-            width: 100%;
-            padding: 10px;
+            width: calc(100% - 24px);
+            padding: 12px;
             margin: 10px 0;
             border: none;
-            border-radius: 5px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            transition: all 0.3s ease-in-out;
         }
+
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        input:focus {
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+            box-shadow: 0 0 10px #00ffff;
+        }
+
         button {
             width: 100%;
-            padding: 10px;
-            border: none;
-            border-radius: 5px;
-            background-color: #007bff;
+            padding: 12px;
+            background-color: #00ffff;
             color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
             cursor: pointer;
+            transition: all 0.3s ease-in-out;
         }
+
         button:hover {
-            background-color: #0056b3;
+            background-color: #00aaff;
         }
-        p {
-            margin: 10px 0;
-        }
-        .success {
-            color: green;
-        }
+
         .error {
             color: red;
+            margin-top: 10px;
         }
-        footer {
-            margin-top: 20px;
-            font-size: 12px;
-            color: lightgray;
+
+        .success {
+            color: green;
+            margin-top: 10px;
         }
     </style>
-    <script type="module">
-        import { initializeApp } from "firebase/app";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
-        import { getFirestore, collection, addDoc } from "firebase/firestore";
+</head>
+<body style="background: url('thumb.jpg') no-repeat center center fixed; background-size: cover;">
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyDC7a1EgO3tRWsb4_ywFnzcsjJ_7S7UtaU",
-            authDomain: "gestionutilisateur-3f8e6.firebaseapp.com",
-            projectId: "gestionutilisateur-3f8e6",
-            storageBucket: "gestionutilisateur-3f8e6.appspot.com",
-            messagingSenderId: "872127075871",
-            appId: "1:872127075871:web:1b44316d800ddf2cf8e72a",
-            measurementId: "G-HM68M5YWEY"
+    <div class="container">
+        <h1 id="formTitle">Inscription</h1>
+        
+        <div id="registerForm" class="form-container">
+            <p>
+                <input type="text" id="username" placeholder="Nom d'utilisateur" required>
+            </p>
+            <p>
+                <input type="email" id="email" placeholder="Email" required>
+            </p>
+            <p>
+                <input type="password" id="password" placeholder="Mot de passe" required>
+            </p>
+            <p>
+                <button id="registerBtn">S'inscrire</button>
+            </p>
+            <div id="message" class="error"></div>
+            <p>
+                Vous avez déjà un compte ? <a href="#" id="showLogin">Connectez-vous ici</a>
+            </p>
+        </div>
+
+        <div id="loginForm" class="form-container" style="display: none;">
+            <p>
+                <input type="email" id="loginEmail" placeholder="Email" required>
+            </p>
+            <p>
+                <input type="password" id="loginPassword" placeholder="Mot de passe" required>
+            </p>
+            <p>
+                <button id="loginBtn">Se connecter</button>
+            </p>
+            <div id="loginMessage" class="error"></div>
+            <p>
+                Vous n'avez pas de compte ? <a href="#" id="showRegister">Créez-en un ici</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const request = indexedDB.open("UserDatabase", 1);
+        let db;
+
+        request.onupgradeneeded = (event) => {
+            db = event.target.result;
+            const userStore = db.createObjectStore("users", { keyPath: "id", autoIncrement: true });
+            userStore.createIndex("email", "email", { unique: true });
+            userStore.createIndex("username", "username", { unique: true });
         };
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        request.onsuccess = (event) => {
+            db = event.target.result;
+            console.log("Base de données ouverte avec succès!");
+            showRegisterForm(); // Affiche le formulaire d'inscription par défaut
+        };
+
+        const addUser = (user) => {
+            const transaction = db.transaction("users", "readwrite");
+            const userStore = transaction.objectStore("users");
+            const request = userStore.add(user);
+
+            request.onsuccess = () => {
+                displayMessage("Utilisateur inscrit avec succès!", "success");
+            };
+
+            request.onerror = () => {
+                displayMessage("L'email ou le nom d'utilisateur est déjà utilisé ou une erreur s'est produite.", "error");
+            };
+        };
+
+        const checkEmailExists = (email, callback) => {
+            const transaction = db.transaction("users", "readonly");
+            const userStore = transaction.objectStore("users");
+            const index = userStore.index("email");
+
+            const request = index.get(email);
+            request.onsuccess = (event) => {
+                const user = event.target.result;
+                callback(!!user);
+            };
+
+            request.onerror = () => {
+                console.error("Erreur lors de la recherche de l'utilisateur");
+                callback(false);
+            };
+        };
+
+        const checkUsernameExists = (username, callback) => {
+            const transaction = db.transaction("users", "readonly");
+            const userStore = transaction.objectStore("users");
+            const index = userStore.index("username");
+
+            const request = index.get(username);
+            request.onsuccess = (event) => {
+                const user = event.target.result;
+                callback(!!user);
+            };
+
+            request.onerror = () => {
+                console.error("Erreur lors de la recherche de l'utilisateur");
+                callback(false);
+            };
+        };
 
         const validatePassword = (password) => {
-            const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*()_+={}\[\]:;"'<>,.?/~`\\|]).{8,18}$/;
+            const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,18}$/;
             return passwordRegex.test(password);
         };
 
-        const addUser = async (username, email, password) => {
-            if (!validatePassword(password)) {
-                document.getElementById("message").textContent = "Le mot de passe doit contenir entre 8 et 18 caractères, y compris des lettres, des chiffres et des caractères spéciaux.";
-                document.getElementById("message").classList.add("error");
+        const displayMessage = (message, type) => {
+            const messageDiv = document.getElementById("message");
+            messageDiv.textContent = message;
+            messageDiv.className = type; // "error" ou "success"
+        };
+
+        const showRegisterForm = () => {
+            document.getElementById("formTitle").textContent = "Inscription";
+            document.getElementById("registerForm").style.display = "block";
+            document.getElementById("loginForm").style.display = "none";
+        };
+
+        const showLoginForm = () => {
+            document.getElementById("formTitle").textContent = "Connexion";
+            document.getElementById("loginForm").style.display = "block";
+            document.getElementById("registerForm").style.display = "none";
+        };
+
+        document.getElementById("registerBtn").onclick = () => {
+            const username = document.getElementById("username").value.trim();
+            const email = document.getElementById("email").value.trim();
+            const password = document.getElementById("password").value.trim();
+
+            displayMessage("", ""); // Reset message
+
+            if (!username || !email || !password) {
+                displayMessage("Veuillez remplir tous les champs", "error");
                 return;
             }
 
-            try {
-                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                const user = userCredential.user;
-
-                await addDoc(collection(db, 'users'), {
-                    username: username,
-                    email: email,
-                    uid: user.uid
-                });
-
-                document.getElementById("message").textContent = "Utilisateur inscrit avec succès !";
-                document.getElementById("message").classList.add("success");
-            } catch (error) {
-                document.getElementById("message").textContent = "Erreur : " + error.message;
-                document.getElementById("message").classList.add("error");
+            if (!validatePassword(password)) {
+                displayMessage("Le mot de passe doit contenir entre 8 et 18 caractères, avec des lettres, des chiffres et des caractères spéciaux.", "error");
+                return;
             }
+
+            checkEmailExists(email, (emailExists) => {
+                if (emailExists) {
+                    displayMessage("Cet email est déjà utilisé. Veuillez en choisir un autre.", "error");
+                } else {
+                    checkUsernameExists(username, (usernameExists) => {
+                        if (usernameExists) {
+                            displayMessage("Ce nom d'utilisateur est déjà utilisé. Veuillez en choisir un autre.", "error");
+                        } else {
+                            addUser({ username, email, password });
+                            document.getElementById("username").value = "";
+                            document.getElementById("email").value = "";
+                            document.getElementById("password").value = "";
+                        }
+                    });
+                }
+            });
         };
 
-        const loginUser = async (email, password) => {
-            try {
-                await signInWithEmailAndPassword(auth, email, password);
-                document.getElementById("loginMessage").textContent = "Connexion réussie!";
-                document.getElementById("loginMessage").classList.add("success");
-            } catch (error) {
-                document.getElementById("loginMessage").textContent = "Identifiants invalides.";
-                document.getElementById("loginMessage").classList.add("error");
+        document.getElementById("loginBtn").onclick = () => {
+            const email = document.getElementById("loginEmail").value.trim();
+            const password = document.getElementById("loginPassword").value.trim();
+            const loginMessage = document.getElementById("loginMessage");
+
+            loginMessage.textContent = ""; // Reset message
+
+            if (!email || !password) {
+                loginMessage.textContent = "Veuillez remplir tous les champs.";
+                loginMessage.className = "error";
+                return;
             }
+
+            checkEmailExists(email, (emailExists) => {
+                if (!emailExists) {
+                    loginMessage.textContent = "Cet email n'existe pas. Veuillez vérifier.";
+                    loginMessage.className = "error";
+                    return;
+                }
+
+                const transaction = db.transaction("users", "readonly");
+                const userStore = transaction.objectStore("users");
+                const index = userStore.index("email");
+
+                const request = index.get(email);
+                request.onsuccess = (event) => {
+                    const user = event.target.result;
+                    if (user && user.password === password) {
+                        loginMessage.textContent = "Connexion réussie!";
+                        loginMessage.className = "success";
+                    } else {
+                        loginMessage.textContent = "Identifiants invalides.";
+                        loginMessage.className = "error";
+                    }
+                };
+            });
         };
 
-        document.addEventListener("DOMContentLoaded", () => {
-            document.getElementById("registerForm").addEventListener("submit", async (event) => {
-                event.preventDefault();
-                const username = document.getElementById("username").value;
-                const email = document.getElementById("email").value;
-                const password = document.getElementById("password").value;
-                await addUser(username, email, password);
-            });
+        document.getElementById("showLogin").onclick = (event) => {
+            event.preventDefault();
+            showLoginForm();
+        };
 
-            document.getElementById("loginForm").addEventListener("submit", async (event) => {
-                event.preventDefault();
-                const email = document.getElementById("loginEmail").value;
-                const password = document.getElementById("loginPassword").value;
-                await loginUser(email, password);
-            });
-
-            document.getElementById("showRegister").onclick = () => {
-                document.getElementById("loginSection").style.display = "none";
-                document.getElementById("registerSection").style.display = "block";
-            };
-
-            document.getElementById("showLogin").onclick = () => {
-                document.getElementById("registerSection").style.display = "none";
-                document.getElementById("loginSection").style.display = "block";
-            };
-        });
+        document.getElementById("showRegister").onclick = (event) => {
+            event.preventDefault();
+            showRegisterForm();
+        };
     </script>
-</head>
-<body>
-    <div class="container">
-        <h1>Inscription et Connexion</h1>
-
-        <div id="loginSection">
-            <h2>Connexion</h2>
-            <form id="loginForm">
-                <label for="loginEmail">Email</label>
-                <input type="email" id="loginEmail" placeholder="Email" required>
-                <label for="loginPassword">Mot de passe</label>
-                <input type="password" id="loginPassword" placeholder="Mot de passe" required>
-                <button type="submit">Se connecter</button>
-                <p id="loginMessage"></p>
-            </form>
-            <p>Vous n'avez pas de compte? <a href="#" id="showRegister">Créez-en un</a></p>
-        </div>
-
-        <div id="registerSection" style="display: none;">
-            <h2>Inscription</h2>
-            <form id="registerForm">
-                <label for="username">Nom d'utilisateur</label>
-                <input type="text" id="username" placeholder="Nom d'utilisateur" required>
-                <label for="email">Email</label>
-                <input type="email" id="email" placeholder="Email" required>
-                <label for="password">Mot de passe</label>
-                <input type="password" id="password" placeholder="Mot de passe" required>
-                <button type="submit">S'inscrire</button>
-                <p id="message"></p>
-            </form>
-            <p>Vous avez déjà un compte? <a href="#" id="showLogin">Connectez-vous ici</a></p>
-        </div>
-    </div>
-    <footer>
-        © 2023-2024 Harstudios Corps / Hans Technologies
-    </footer>
 </body>
 </html>
