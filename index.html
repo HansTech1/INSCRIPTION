@@ -2,13 +2,12 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, content-scale=1.0">
     <title>Inscription et Connexion</title>
     
-    <!-- Liens pour les polices Google -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Advent+Pro:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Advent+Pro:wght@400&display=swap" rel="stylesheet">
     
     <style>
         body {
@@ -53,6 +52,17 @@
         p {
             margin: 10px 0;
         }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+        footer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: lightgray;
+        }
     </style>
     <script type="module">
         import { initializeApp } from "firebase/app";
@@ -73,7 +83,18 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        const validatePassword = (password) => {
+            const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*()_+={}\[\]:;"'<>,.?/~`\\|]).{8,18}$/;
+            return passwordRegex.test(password);
+        };
+
         const addUser = async (username, email, password) => {
+            if (!validatePassword(password)) {
+                document.getElementById("message").textContent = "Le mot de passe doit contenir entre 8 et 18 caractères, y compris des lettres, des chiffres et des caractères spéciaux.";
+                document.getElementById("message").classList.add("error");
+                return;
+            }
+
             try {
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
@@ -85,8 +106,10 @@
                 });
 
                 document.getElementById("message").textContent = "Utilisateur inscrit avec succès !";
+                document.getElementById("message").classList.add("success");
             } catch (error) {
                 document.getElementById("message").textContent = "Erreur : " + error.message;
+                document.getElementById("message").classList.add("error");
             }
         };
 
@@ -94,8 +117,10 @@
             try {
                 await signInWithEmailAndPassword(auth, email, password);
                 document.getElementById("loginMessage").textContent = "Connexion réussie!";
+                document.getElementById("loginMessage").classList.add("success");
             } catch (error) {
                 document.getElementById("loginMessage").textContent = "Identifiants invalides.";
+                document.getElementById("loginMessage").classList.add("error");
             }
         };
 
@@ -159,5 +184,8 @@
             <p>Vous avez déjà un compte? <a href="#" id="showLogin">Connectez-vous ici</a></p>
         </div>
     </div>
+    <footer>
+        © 2023-2024 Harstudios Corps / Hans Technologies
+    </footer>
 </body>
 </html>
